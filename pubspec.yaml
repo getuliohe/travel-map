@@ -36,7 +36,12 @@ dependencies:
   cupertino_icons: ^1.0.8
   firebase_core: ^2.30.0
   cloud_firestore: ^4.17.0
-
+  firebase_auth: ^4.19.6
+  image_picker: ^1.1.2       # Para selecionar imagens
+  firebase_storage: ^11.7.7  # Para armazenar as imagens
+  # Você também pode querer um pacote de avaliação, como:
+  flutter_rating_bar: ^4.0.1
+  # Maps_flutter: ^2.6.1
 dev_dependencies:
   flutter_test:
     sdk: flutter
