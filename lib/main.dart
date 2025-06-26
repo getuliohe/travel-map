@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'auth_wrapper.dart'; // Importe o novo wrapper
+import 'auth_wrapper.dart';
 import 'firebase_options.dart';
 
 void main() async {
@@ -8,19 +8,19 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'TravelMap App',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
-      // A home do app agora é o AuthWrapper, que cuidará da lógica de navegação.
+      theme: ThemeData(primarySwatch: Colors.indigo),
       home: AuthWrapper(),
+      debugShowCheckedModeBanner: false,
     );
   }
 }

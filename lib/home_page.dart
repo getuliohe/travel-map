@@ -1,70 +1,50 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:geolocator/geolocator.dart';
+import 'add_post_page.dart'; // Importe a nova página
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
+  const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  // A lógica de geolocalização pode permanecer aqui ou ser movida
+  // para onde for mais útil, como a página de posts.
+  // Por enquanto, vamos focar na navegação.
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('TravelMap - Recomendações'),
+        title: const Text('TravelMap'), // Título atualizado
         actions: [
-          // Botão para Adicionar Post (a ser implementado)
           IconButton(
-            icon: Icon(Icons.add_a_photo),
-            onPressed: () {
-              // Navegar para a tela de criação de post
-            },
-          ),
-          // Botão de Logout
-          IconButton(
-            icon: Icon(Icons.logout),
+            icon: const Icon(Icons.logout),
             onPressed: () async {
               await FirebaseAuth.instance.signOut();
-              // O AuthWrapper cuidará da navegação
             },
           ),
         ],
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance.collection('posts').orderBy('createdAt', descending: true).snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
-          }
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return Center(child: Text('Nenhum post encontrado.'));
-          }
-
-          final posts = snapshot.data!.docs;
-
-          return ListView.builder(
-            itemCount: posts.length,
-            itemBuilder: (context, index) {
-              final post = posts[index];
-              final data = post.data() as Map<String, dynamic>;
-
-              return Card(
-                margin: EdgeInsets.all(10),
-                child: ListTile(
-                  leading: data['imageUrl'] != null
-                      ? Image.network(
-                          data['imageUrl'],
-                          width: 100,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => Icon(Icons.image, size: 50),
-                        )
-                      : Icon(Icons.image, size: 50),
-                  title: Text(data['placeName'] ?? 'Nome indisponível'),
-                  subtitle: Text('por ${data['authorName'] ?? 'Anônimo'}'),
-                  onTap: () {
-                    // Navegar para a tela de detalhes do post
-                  },
-                ),
-              );
-            },
+      // Corpo da Home Page será o feed de posts (a ser implementado)
+      body: const Center(
+        child: Text(
+          'Feed de Posts aparecerá aqui!',
+          style: TextStyle(fontSize: 20),
+        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const AddPostPage()),
           );
         },
+        backgroundColor: Colors.indigo,
+        child: const Icon(Icons.add_location_alt),
       ),
     );
   }
