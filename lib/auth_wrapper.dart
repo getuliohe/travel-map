@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'home_page.dart';
+import 'main_screen.dart'; // Navega para a MainScreen
 import 'welcome_page.dart';
 
 class AuthWrapper extends StatelessWidget {
@@ -13,9 +13,9 @@ class AuthWrapper extends StatelessWidget {
           return const Scaffold(body: Center(child: CircularProgressIndicator()));
         }
         if (snapshot.hasData) {
-          return HomePage();
+          return const MainScreen(); // Se logado, vai para a tela principal
         }
-        return WelcomePage();
+        return const WelcomePage(); // Se não, para a de boas-vindas
       },
     );
   }

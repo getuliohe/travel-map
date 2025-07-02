@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:geolocator/geolocator.dart';
 import 'add_post_page.dart';
 import 'post_card.dart';
+import 'theme/app_theme.dart'; // <-- A CORREÇÃO ESTÁ AQUI
 
 enum PostFilter { recent, nearby }
 
@@ -17,141 +18,124 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   PostFilter _selectedFilter = PostFilter.recent;
   Position? _currentPosition;
+  String? _username;
 
   @override
   void initState() {
     super.initState();
-    _determinePosition();
+    _fetchUserDataAndLocation();
   }
 
-  Future<void> _determinePosition() async {
-    // Lógica para obter permissão de localização
-    bool serviceEnabled;
-    LocationPermission permission;
-
-    serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      return Future.error('Serviços de localização estão desabilitados.');
-    }
-
-    permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        return Future.error('Permissão de localização negada.');
+  Future<void> _fetchUserDataAndLocation() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final userData = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      if (mounted) {
+        setState(() {
+          _username = userData.data()?['username'];
+        });
       }
     }
     
-    if (permission == LocationPermission.deniedForever) {
-      return Future.error('Permissão de localização negada permanentemente.');
-    } 
+    // Lógica para obter a localização
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) return;
 
-    // Obtém a posição e atualiza o estado
-    final position = await Geolocator.getCurrentPosition();
-    if (mounted) {
-      setState(() {
-        _currentPosition = position;
-      });
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) return;
+      }
+      
+      if (permission == LocationPermission.deniedForever) return; 
+
+      final position = await Geolocator.getCurrentPosition();
+      if (mounted) {
+        setState(() {
+          _currentPosition = position;
+        });
+      }
+    } catch (e) {
+      print("Erro ao buscar localização: $e");
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('TravelMap Feed'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await FirebaseAuth.instance.signOut();
-            },
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // Seletor de Filtro
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: SegmentedButton<PostFilter>(
-              segments: const <ButtonSegment<PostFilter>>[
-                ButtonSegment<PostFilter>(
-                  value: PostFilter.recent,
-                  label: Text('Recentes'),
-                  icon: Icon(Icons.schedule),
-                ),
-                ButtonSegment<PostFilter>(
-                  value: PostFilter.nearby,
-                  label: Text('Próximos'),
-                  icon: Icon(Icons.location_on_outlined),
-                ),
-              ],
-              selected: <PostFilter>{_selectedFilter},
-              onSelectionChanged: (Set<PostFilter> newSelection) {
-                setState(() {
-                  _selectedFilter = newSelection.first;
-                });
-              },
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Cabeçalho
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Olá, ${_username ?? 'Viajante'} 👋',
+                        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                      ),
+                      const Text('Explore o mundo!', style: TextStyle(color: Colors.grey)),
+                    ],
+                  ),
+                  const CircleAvatar(
+                    backgroundColor: Colors.grey,
+                  )
+                ],
+              ),
             ),
-          ),
-          
-          // Feed de Posts
-          Expanded(
-            child: StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance.collection('posts').orderBy('createdAt', descending: true).snapshots(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return const Center(child: Text('Nenhum post encontrado.'));
-                }
-
-                List<DocumentSnapshot> posts = snapshot.data!.docs;
-                Map<String, double> distances = {};
-
-                // Se o filtro for "Próximos" e a localização estiver disponível
-                if (_selectedFilter == PostFilter.nearby && _currentPosition != null) {
-                  for (var post in posts) {
-                    final data = post.data() as Map<String, dynamic>;
-                    final geoPoint = data['location'] as GeoPoint;
-                    final distance = Geolocator.distanceBetween(
-                      _currentPosition!.latitude,
-                      _currentPosition!.longitude,
-                      geoPoint.latitude,
-                      geoPoint.longitude,
-                    ) / 1000; // Converte para km
-                    distances[post.id] = distance;
-                  }
-                  // Ordena a lista de posts com base na distância calculada
-                  posts.sort((a, b) => distances[a.id]!.compareTo(distances[b.id]!));
-                }
-
-                return ListView.builder(
-                  itemCount: posts.length,
-                  itemBuilder: (context, index) {
-                    final post = posts[index];
-                    return PostCard(
-                      post: post,
-                      distance: distances[post.id],
-                    );
-                  },
-                );
-              },
+            // Barra de Busca
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: TextField(
+                decoration: InputDecoration(
+                  hintText: 'Explorar',
+                  prefixIcon: const Icon(Icons.search),
+                  fillColor: AppTheme.lightGrey,
+                  suffixIcon: IconButton(
+                    icon: const Icon(Icons.filter_list),
+                    onPressed: () {},
+                  ),
+                ),
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: 16),
+            // Filtros
+            // (O SegmentedButton pode ser estilizado aqui depois)
+
+            // Feed
+            Expanded(
+              child: StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance.collection('posts').orderBy('createdAt', descending: true).snapshots(),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+                  final posts = snapshot.data!.docs;
+                  
+                  // A lógica de ordenação por proximidade pode ser adicionada aqui
+                  
+                  return ListView.builder(
+                    scrollDirection: Axis.horizontal, // Faz o scroll ser horizontal
+                    itemCount: posts.length,
+                    itemBuilder: (context, index) => PostCard(post: posts[index]),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const AddPostPage()),
-          );
+          Navigator.push(context, MaterialPageRoute(builder: (context) => const AddPostPage()));
         },
-        backgroundColor: Colors.indigo,
-        child: const Icon(Icons.add),
+        backgroundColor: Theme.of(context).primaryColor,
+        child: const Icon(Icons.add, color: Colors.white),
+        shape: const CircleBorder(),
       ),
     );
   }
