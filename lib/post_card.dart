@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'post_detail_page.dart';
+import 'package:flutter_rating_bar/flutter_rating_bar.dart';
+import 'package:travelmap3/post_detail_page.dart';
 
 class PostCard extends StatelessWidget {
   final DocumentSnapshot post;
@@ -9,10 +10,17 @@ class PostCard extends StatelessWidget {
 
   const PostCard({super.key, required this.post, this.distance});
 
+  double _calculateAverageRating(Map<String, dynamic> ratings) {
+    final values = ratings.values.whereType<num>().map((e) => e.toDouble());
+    if (values.isEmpty) return 0.0;
+    return values.reduce((a, b) => a + b) / values.length;
+  }
+
   @override
   Widget build(BuildContext context) {
     final data = post.data() as Map<String, dynamic>;
     final bool hasImage = data.containsKey('imageUrl') && data['imageUrl'] != null;
+    double averageRating = data.containsKey('ratings') ? _calculateAverageRating(data['ratings']) : 0.0;
 
     return GestureDetector(
       onTap: () {
@@ -23,7 +31,6 @@ class PostCard extends StatelessWidget {
         margin: const EdgeInsets.only(left: 16),
         child: Stack(
           children: [
-            // Imagem com bordas arredondadas
             ClipRRect(
               borderRadius: BorderRadius.circular(20.0),
               child: hasImage
@@ -37,7 +44,6 @@ class PostCard extends StatelessWidget {
                     )
                   : Container(width: 220, height: 320, color: Colors.grey[200]),
             ),
-            // Gradiente para escurecer a parte de baixo da imagem
             Positioned.fill(
               child: DecoratedBox(
                 decoration: BoxDecoration(
@@ -51,13 +57,6 @@ class PostCard extends StatelessWidget {
                 ),
               ),
             ),
-            // Ícone de favorito
-            const Positioned(
-              top: 16,
-              right: 16,
-              child: Icon(Icons.favorite_border, color: Colors.white),
-            ),
-            // Textos sobre a imagem
             Positioned(
               bottom: 20,
               left: 20,
@@ -67,27 +66,32 @@ class PostCard extends StatelessWidget {
                 children: [
                   Text(
                     data['placeName'] ?? 'Sem nome',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 4),
+                  // ATUALIZAÇÃO: Adicionado o nome do autor
+                  Text(
+                    'por ${data['authorName'] ?? 'Anônimo'}',
+                    style: const TextStyle(color: Colors.white70, fontSize: 12),
                   ),
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      const Icon(Icons.location_on, color: Colors.white, size: 16),
-                      const SizedBox(width: 4),
-                      Text(
-                        data['authorName'] ?? 'South, America', // Placeholder
-                        style: const TextStyle(color: Colors.white, fontSize: 14),
-                      ),
+                      if (averageRating > 0)
+                        RatingBarIndicator(
+                          rating: averageRating,
+                          itemBuilder: (context, index) => const Icon(Icons.star, color: Colors.amber),
+                          itemCount: 5,
+                          itemSize: 16.0,
+                        ),
                       const Spacer(),
-                      const Icon(Icons.star, color: Colors.amber, size: 16),
-                      const SizedBox(width: 4),
-                      const Text('4.9', style: TextStyle(color: Colors.white, fontSize: 14)), // Placeholder
+                      if (distance != null)
+                        Text(
+                          '${distance!.toStringAsFixed(1)} km',
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                        ),
                     ],
-                  )
+                  ),
                 ],
               ),
             ),

@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:geolocator/geolocator.dart';
-import 'add_post_page.dart';
-import 'post_card.dart';
-import 'theme/app_theme.dart'; // <-- A CORREÇÃO ESTÁ AQUI
+import 'package:travelmap3/add_post_page.dart';
+import 'package:travelmap3/post_card.dart';
+import 'package:travelmap3/theme/app_theme.dart';
 
 enum PostFilter { recent, nearby }
 
@@ -36,20 +36,19 @@ class _HomePageState extends State<HomePage> {
         });
       }
     }
-    
-    // Lógica para obter a localização
+    await _determinePosition();
+  }
+
+  Future<void> _determinePosition() async {
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) return;
-
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) return;
       }
-      
-      if (permission == LocationPermission.deniedForever) return; 
-
+      if (permission == LocationPermission.deniedForever) return;
       final position = await Geolocator.getCurrentPosition();
       if (mounted) {
         setState(() {
@@ -66,8 +65,8 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       body: SafeArea(
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Cabeçalho
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Row(
@@ -83,13 +82,10 @@ class _HomePageState extends State<HomePage> {
                       const Text('Explore o mundo!', style: TextStyle(color: Colors.grey)),
                     ],
                   ),
-                  const CircleAvatar(
-                    backgroundColor: Colors.grey,
-                  )
+                  const CircleAvatar(backgroundColor: Colors.grey),
                 ],
               ),
             ),
-            // Barra de Busca
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: TextField(
@@ -104,24 +100,61 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
             ),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Text("Lugares populares", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: SegmentedButton<PostFilter>(
+                segments: const <ButtonSegment<PostFilter>>[
+                  ButtonSegment<PostFilter>(value: PostFilter.recent, label: Text('Recentes')),
+                  ButtonSegment<PostFilter>(value: PostFilter.nearby, label: Text('Próximos')),
+                ],
+                selected: <PostFilter>{_selectedFilter},
+                onSelectionChanged: (newSelection) {
+                  setState(() {
+                    _selectedFilter = newSelection.first;
+                  });
+                },
+              ),
+            ),
             const SizedBox(height: 16),
-            // Filtros
-            // (O SegmentedButton pode ser estilizado aqui depois)
-
-            // Feed
-            Expanded(
+            SizedBox(
+              height: 320,
               child: StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance.collection('posts').orderBy('createdAt', descending: true).snapshots(),
                 builder: (context, snapshot) {
                   if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-                  final posts = snapshot.data!.docs;
                   
-                  // A lógica de ordenação por proximidade pode ser adicionada aqui
+                  List<DocumentSnapshot> posts = snapshot.data!.docs;
+                  Map<String, double> distances = {};
                   
+                  if (_currentPosition != null) {
+                    for (var post in posts) {
+                      final data = post.data() as Map<String, dynamic>;
+                      final geoPoint = data['location'] as GeoPoint;
+                      distances[post.id] = Geolocator.distanceBetween(
+                        _currentPosition!.latitude, _currentPosition!.longitude,
+                        geoPoint.latitude, geoPoint.longitude,
+                      ) / 1000; // em km
+                    }
+                  }
+
+                  if (_selectedFilter == PostFilter.nearby) {
+                    if (_currentPosition == null) {
+                      return const Center(child: Text("Habilite a localização para ver posts próximos."));
+                    }
+                    posts.sort((a, b) => distances[a.id]!.compareTo(distances[b.id]!));
+                  }
+
                   return ListView.builder(
-                    scrollDirection: Axis.horizontal, // Faz o scroll ser horizontal
+                    scrollDirection: Axis.horizontal,
                     itemCount: posts.length,
-                    itemBuilder: (context, index) => PostCard(post: posts[index]),
+                    itemBuilder: (context, index) => PostCard(
+                      post: posts[index],
+                      distance: distances[posts[index].id], // Passa a distância para o card
+                    ),
                   );
                 },
               ),
@@ -129,7 +162,7 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
+       floatingActionButton: FloatingActionButton(
         onPressed: () {
           Navigator.push(context, MaterialPageRoute(builder: (context) => const AddPostPage()));
         },

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'home_page.dart'; // Nosso feed principal
+import 'package:travelmap3/home_page.dart';
+import 'package:travelmap3/map_view_page.dart';
+import 'package:travelmap3/profile_page.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -11,12 +13,11 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
 
-  // Lista de páginas que a barra de navegação irá controlar
-  static final List<Widget> _widgetOptions = <Widget>[
-    const HomePage(), // O nosso feed
-    const Center(child: Text('Página de Busca (em breve)')),
-    const Center(child: Text('Página de Favoritos (em breve)')),
-    const Center(child: Text('Página de Perfil (em breve)')),
+  // ATUALIZAÇÃO: Removida a FavoritesPage
+  static const List<Widget> _widgetOptions = <Widget>[
+    HomePage(),
+    MapViewPage(),
+    ProfilePage(),
   ];
 
   void _onItemTapped(int index) {
@@ -28,20 +29,20 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack( // Usa IndexedStack para manter o estado das páginas
+      body: IndexedStack(
         index: _selectedIndex,
         children: _widgetOptions,
       ),
       bottomNavigationBar: BottomNavigationBar(
+        // ATUALIZAÇÃO: Removido o item de Favoritos
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Início'),
-          BottomNavigationBarItem(icon: Icon(Icons.search_outlined), activeIcon: Icon(Icons.search), label: 'Busca'),
-          BottomNavigationBarItem(icon: Icon(Icons.favorite_border), activeIcon: Icon(Icons.favorite), label: 'Favoritos'),
+          BottomNavigationBarItem(icon: Icon(Icons.map_outlined), activeIcon: Icon(Icons.map), label: 'Mapa'),
           BottomNavigationBarItem(icon: Icon(Icons.person_outline), activeIcon: Icon(Icons.person), label: 'Perfil'),
         ],
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
-        type: BottomNavigationBarType.fixed, // Para mais de 3 itens
+        type: BottomNavigationBarType.fixed,
         selectedItemColor: Theme.of(context).primaryColor,
         unselectedItemColor: Colors.grey,
         showUnselectedLabels: false,

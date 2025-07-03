@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:travelmap3/register_page.dart';
 import 'theme/app_theme.dart';
 
 class LoginPage extends StatefulWidget {
@@ -29,14 +30,16 @@ class _LoginPageState extends State<LoginPage> {
         SnackBar(content: Text(e.message ?? "Erro desconhecido")),
       );
     }
-    setState(() => _isLoading = false);
+    if (mounted) {
+      setState(() => _isLoading = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       extendBodyBehindAppBar: true,
-      appBar: AppBar(backgroundColor: Colors.transparent),
+      appBar: AppBar(backgroundColor: Colors.transparent, elevation: 0),
       body: Container(
          decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -52,14 +55,14 @@ class _LoginPageState extends State<LoginPage> {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text('Login/entrar', style: TextStyle(color: Colors.white70, fontSize: 16)),
-              const SizedBox(height: 40),
+              const Spacer(),
               const Text('TravelMap', textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontSize: 40, fontWeight: FontWeight.bold)),
               const SizedBox(height: 40),
               TextFormField(
                 controller: _emailController,
+                keyboardType: TextInputType.emailAddress,
                 style: const TextStyle(color: AppTheme.darkTextColor),
-                decoration: const InputDecoration(hintText: 'NOME'),
+                decoration: const InputDecoration(hintText: 'E-MAIL'),
                 validator: (value) => value!.isEmpty ? 'Campo obrigatório' : null,
               ),
               const SizedBox(height: 20),
@@ -72,12 +75,28 @@ class _LoginPageState extends State<LoginPage> {
               ),
               const SizedBox(height: 40),
               _isLoading
-                  ? const Center(child: CircularProgressIndicator())
+                  ? const Center(child: CircularProgressIndicator(color: Colors.white))
                   : ElevatedButton(
                       onPressed: _signIn,
                       style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accentColor, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 12)),
                       child: const Text('LOGIN'),
                     ),
+              const SizedBox(height: 24),
+              GestureDetector(
+                onTap: () {
+                  Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => RegisterPage()));
+                },
+                child: const Text(
+                  'Não possui conta? Cadastre-se',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white70,
+                    decoration: TextDecoration.underline,
+                    decorationColor: Colors.white70,
+                  ),
+                ),
+              ),
+              const Spacer(),
             ],
           ),
         ),
